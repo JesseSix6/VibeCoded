@@ -1,0 +1,123 @@
+name: Tracker — dagelijkse check
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # elke dag om 8u 's ochtends (UTC)
+  workflow_dispatch:        # ook manueel te starten via GitHub UI
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Controleer events en stuur email indien nodig
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+          GIST_ID: ${{ vars.GIST_ID }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, urllib.request, urllib.error, os
+          from datetime import datetime, timezone
+
+          RESEND_API_KEY = os.environ["RESEND_API_KEY"]
+          GIST_TOKEN     = os.environ["GIST_TOKEN"]
+          GIST_ID        = os.environ["GIST_ID"]
+          TO_EMAIL       = "sixjesse@gmail.com"
+          FROM_EMAIL     = "tracker@resend.dev"
+          ALERT_HOURS    = 96
+
+          EVENTS = [
+            { "id": "kattenbak", "name": "Kattenbak kuisen", "icon": "🐱" },
+            # Voeg hier extra events toe die ook gecheckt moeten worden
+          ]
+
+          # Gist ophalen
+          req = urllib.request.Request(
+            f"https://api.github.com/gists/{GIST_ID}",
+            headers={
+              "Authorization": f"Bearer {GIST_TOKEN}",
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+            }
+          )
+          try:
+            with urllib.request.urlopen(req) as resp:
+              gist = json.loads(resp.read())
+            content = gist["files"]["tracker_log.json"]["content"]
+            log = json.loads(content)
+          except Exception as e:
+            print(f"Gist ophalen mislukt: {e}")
+            exit(1)
+
+          now_ms = datetime.now(timezone.utc).timestamp() * 1000
+          limit_ms = ALERT_HOURS * 3600 * 1000
+          overdue = []
+
+          for ev in EVENTS:
+            entries = [e for e in log if e["id"] == ev["id"]]
+            if not entries:
+              overdue.append({ **ev, "last": None })
+            else:
+              last_ts = max(e["ts"] for e in entries)
+              if (now_ms - last_ts) > limit_ms:
+                last_dt = datetime.fromtimestamp(last_ts / 1000, tz=timezone.utc)
+                overdue.append({ **ev, "last": last_dt.strftime("%d/%m/%Y %H:%M") })
+
+          if not overdue:
+            print("Alles ok, geen emails nodig.")
+            exit(0)
+
+          # Email opstellen
+          rows = ""
+          for ev in overdue:
+            last_str = f"Laatste keer: {ev['last']}" if ev["last"] else "Nog nooit geregistreerd"
+            rows += f"""
+            <tr>
+              <td style="font-size:24px;padding:12px 16px 12px 0">{ev['icon']}</td>
+              <td style="padding:12px 0">
+                <strong style="font-size:16px">{ev['name']}</strong><br>
+                <span style="color:#8e8e93;font-size:13px">{last_str}</span>
+              </td>
+            </tr>"""
+
+          html = f"""<!DOCTYPE html>
+          <html lang="nl"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f2f2f7;margin:0;padding:24px">
+          <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden">
+            <div style="background:#007aff;padding:20px 24px">
+              <h1 style="color:#fff;font-size:20px;margin:0">📋 Tracker herinnering</h1>
+              <p style="color:rgba(255,255,255,0.75);font-size:14px;margin:4px 0 0">
+                De volgende events zijn al meer dan {ALERT_HOURS} uur geleden geregistreerd:
+              </p>
+            </div>
+            <div style="padding:16px 24px">
+              <table style="width:100%;border-collapse:collapse">{rows}</table>
+            </div>
+            <div style="padding:0 24px 20px">
+              <a href="https://jouw-gebruikersnaam.github.io/tracker/"
+                 style="display:block;background:#007aff;color:#fff;text-align:center;padding:12px;border-radius:10px;text-decoration:none;font-weight:500">
+                Open Tracker
+              </a>
+            </div>
+          </div>
+          </body></html>"""
+
+          # Email versturen via Resend
+          payload = json.dumps({
+            "from": FROM_EMAIL,
+            "to": [TO_EMAIL],
+            "subject": f"⏰ Tracker: {len(overdue)} event(s) wacht{'en' if len(overdue) > 1 else ''} op je",
+            "html": html
+          }).encode()
+
+          req2 = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+              "Authorization": f"Bearer {RESEND_API_KEY}",
+              "Content-Type": "application/json",
+            }
+          )
+          with urllib.request.urlopen(req2) as resp:
+            result = json.loads(resp.read())
+            print(f"Email verstuurd: {result}")
+          PYEOF

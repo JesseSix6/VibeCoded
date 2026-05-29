@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Tracker" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f2f2f7;
+      color: #000;
+      min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    header {
+      padding: 16px 16px 0;
+      padding-top: max(16px, env(safe-area-inset-top, 16px));
+      background: #f2f2f7;
+    }
+
+    header h1 {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #000;
+      padding: 8px 4px 4px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 400;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #6c6c70;
+      padding: 18px 20px 6px;
+    }
+
+    .grouped-list {
+      background: #fff;
+      border-radius: 12px;
+      margin: 0 16px;
+      overflow: hidden;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 0.5px solid #c6c6c8;
+      min-height: 52px;
+    }
+
+    .list-row:last-child { border-bottom: none; }
+
+    .row-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .row-body { flex: 1; min-width: 0; }
+
+    .row-name {
+      font-size: 16px;
+      color: #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .row-meta {
+      font-size: 12px;
+      color: #8e8e93;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .row-meta .since { color: #007aff; font-weight: 500; }
+
+    .log-btn {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .log-btn:active { opacity: 0.7; transform: scale(0.96); }
+    .log-btn.done { background: #e5f0ff; color: #007aff; }
+    .log-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 0.5px solid #c6c6c8;
+      min-height: 44px;
+    }
+
+    .history-row:last-child { border-bottom: none; }
+
+    .history-name {
+      flex: 1;
+      font-size: 15px;
+      color: #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-time { font-size: 12px; color: #8e8e93; white-space: nowrap; }
+
+    .history-delete {
+      background: none;
+      border: none;
+      color: #c7c7cc;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .history-delete:active { color: #ff3b30; }
+
+    .empty { padding: 20px; text-align: center; font-size: 14px; color: #8e8e93; }
+
+    .footer { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #8e8e93;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+
+    .clear-btn:active { color: #ff3b30; }
+
+    /* Sync status banner */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 20px;
+      font-size: 12px;
+      color: #8e8e93;
+      min-height: 28px;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #8e8e93;
+      flex-shrink: 0;
+    }
+
+    .sync-dot.ok     { background: #34c759; }
+    .sync-dot.busy   { background: #ff9500; animation: pulse .8s infinite alternate; }
+    .sync-dot.error  { background: #ff3b30; }
+
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
+
+    .ic-green  { background: #e8f7ee; }
+    .ic-orange { background: #fff3e0; }
+    .ic-blue   { background: #e5f0ff; }
+    .ic-pink   { background: #ffeef4; }
+    .ic-purple { background: #f2eeff; }
+    .ic-yellow { background: #fffbe0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Tracker</h1>
+</header>
+<div class="sync-bar">
+  <div class="sync-dot busy" id="sync-dot"></div>
+  <span id="sync-label">Laden…</span>
+</div>
+
+<p class="section-label">Events</p>
+<div class="grouped-list" id="event-list"></div>
+
+<p class="section-label">Geschiedenis</p>
+<div class="grouped-list" id="history-list"></div>
+<div class="footer">
+  <button class="clear-btn" onclick="clearHistory()">Geschiedenis wissen</button>
+</div>
+
+<script>
+  // ─── CONFIGURATIE ──────────────────────────────────────────────────────────
+  const CONFIG = {
+    WORKER_URL: "JOUW_CLOUDFLARE_WORKER_URL",  // bv. https://tracker.jouwnaam.workers.dev
+    GIST_ID:    "c27d272c30ccf4f72ccec681fc858bc7",
+    GIST_FILE:  "tracker_log.json",
+  };
+
+  const EVENTS = [
+    { id: "kattenbak", name: "Kattenbak kuisen", icon: "🐱", iconColor: "ic-green"  },
+    // { id: "kat-eten",  name: "Kat gevoed",       icon: "🍽️", iconColor: "ic-orange" },
+    // { id: "mijn-event", name: "Naam",            icon: "✨",  iconColor: "ic-purple" },
+  ];
+  // ──────────────────────────────────────────────────────────────────────────
+
+  let log = [];
+  let saving = false;
+
+  function setSyncStatus(state, text) {
+    document.getElementById("sync-dot").className = "sync-dot " + state;
+    document.getElementById("sync-label").textContent = text;
+  }
+
+  // ── Gist API helpers (via Cloudflare Worker) ──
+  async function fetchLog() {
+    setSyncStatus("busy", "Laden…");
+    try {
+      const res = await fetch(`${CONFIG.WORKER_URL}/read?gist_id=${CONFIG.GIST_ID}&file=${CONFIG.GIST_FILE}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      log = await res.json();
+      setSyncStatus("ok", "Gesynchroniseerd");
+    } catch (e) {
+      setSyncStatus("error", "Laden mislukt");
+      console.error(e);
+    }
+    render();
+  }
+
+  async function saveLog() {
+    if (saving) return;
+    saving = true;
+    setSyncStatus("busy", "Opslaan…");
+    try {
+      const res = await fetch(`${CONFIG.WORKER_URL}/write`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gist_id: CONFIG.GIST_ID, file: CONFIG.GIST_FILE, data: log })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setSyncStatus("ok", "Opgeslagen");
+    } catch (e) {
+      setSyncStatus("error", "Opslaan mislukt");
+      console.error(e);
+    }
+    saving = false;
+  }
+
+  // ── Acties ──
+  async function logEvent(id) {
+    log.unshift({ id, ts: Date.now() });
+    render();
+
+    const btn = document.querySelector(`[data-id="${id}"] .log-btn`);
+    if (btn) {
+      btn.textContent = "✓ Gelogt";
+      btn.classList.add("done");
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = "Log"; btn.classList.remove("done"); btn.disabled = false; }, 2000);
+    }
+
+    await saveLog();
+  }
+
+  async function deleteEntry(i) {
+    log.splice(i, 1);
+    render();
+    await saveLog();
+  }
+
+  async function clearHistory() {
+    if (!confirm("Volledige geschiedenis wissen?")) return;
+    log = [];
+    render();
+    await saveLog();
+  }
+
+  // ── Hulpfuncties ──
+  function timeSince(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60)    return `${s}s geleden`;
+    if (s < 3600)  return `${Math.floor(s / 60)} min geleden`;
+    if (s < 86400) return `${Math.floor(s / 3600)} uur geleden`;
+    const d = Math.floor(s / 86400);
+    return d === 1 ? "gisteren" : `${d} dagen geleden`;
+  }
+
+  function fmt(ts) {
+    return new Date(ts).toLocaleString("nl-BE", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
+
+  // ── Render ──
+  function render() {
+    const evEl   = document.getElementById("event-list");
+    const histEl = document.getElementById("history-list");
+
+    evEl.innerHTML = EVENTS.map(ev => {
+      const last = log.find(e => e.id === ev.id);
+      const meta = last
+        ? `<span class="since">${timeSince(last.ts)}</span> · ${fmt(last.ts)}`
+        : "Nog niet geregistreerd";
+      return `
+        <div class="list-row" data-id="${ev.id}">
+          <div class="row-icon ${ev.iconColor}">${ev.icon}</div>
+          <div class="row-body">
+            <div class="row-name">${ev.name}</div>
+            <div class="row-meta">${meta}</div>
+          </div>
+          <button class="log-btn" onclick="logEvent('${ev.id}')">Log</button>
+        </div>`;
+    }).join("");
+
+    if (log.length === 0) {
+      histEl.innerHTML = `<p class="empty">Nog geen registraties</p>`;
+      return;
+    }
+
+    histEl.innerHTML = log.slice(0, 50).map((e, i) => {
+      const ev = EVENTS.find(x => x.id === e.id);
+      return `
+        <div class="history-row">
+          <div class="row-icon ${ev ? ev.iconColor : ""}">${ev ? ev.icon : "❓"}</div>
+          <span class="history-name">${ev ? ev.name : e.id}</span>
+          <span class="history-time">${fmt(e.ts)}</span>
+          <button class="history-delete" onclick="deleteEntry(${i})">✕</button>
+        </div>`;
+    }).join("");
+  }
+
+  fetchLog();
+  setInterval(fetchLog, 5 * 60 * 1000); // elke 5 min verversen
+</script>
+</body>
+</html>
