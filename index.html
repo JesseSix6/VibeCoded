@@ -4,285 +4,254 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Tracker" />
   <link rel="apple-touch-icon" href="icon.png" />
   <title>Tracker</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --green: #4a7c59;
-      --green-dark: #3a6347;
-      --green-light: #e8f2ec;
-      --bg: #f0f2f0;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-      --radius: 16px;
-      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.06);
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: #f2f2f7;
+      color: #000;
       min-height: 100vh;
-      padding-top: env(safe-area-inset-top, 0);
-      padding-bottom: env(safe-area-inset-bottom, 0);
+      padding-bottom: env(safe-area-inset-bottom, 16px);
     }
 
+    /* Large title header */
     header {
-      background: var(--green);
-      color: white;
-      padding: 20px 20px 24px;
-      padding-top: max(20px, env(safe-area-inset-top, 20px));
+      padding: 16px 16px 0;
+      padding-top: max(16px, env(safe-area-inset-top, 16px));
+      background: #f2f2f7;
     }
 
     header h1 {
-      font-size: 1.4rem;
+      font-size: 34px;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.5px;
+      color: #000;
+      padding: 8px 4px 4px;
     }
 
-    header p {
-      font-size: 0.85rem;
-      opacity: 0.75;
-      margin-top: 2px;
-    }
-
-    main {
-      padding: 20px 16px 40px;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
+    /* Section label */
     .section-label {
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 400;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin: 24px 0 10px;
+      letter-spacing: 0.03em;
+      color: #6c6c70;
+      padding: 18px 20px 6px;
     }
 
-    .section-label:first-child { margin-top: 0; }
-
-    .event-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+    /* Grouped list */
+    .grouped-list {
+      background: #fff;
+      border-radius: 12px;
+      margin: 0 16px;
+      overflow: hidden;
     }
 
-    .card {
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 14px 16px;
+    .list-row {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 0.5px solid #c6c6c8;
+      min-height: 52px;
     }
 
-    .card-icon {
-      font-size: 1.8rem;
-      width: 44px;
-      height: 44px;
+    .list-row:last-child { border-bottom: none; }
+
+    .row-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--green-light);
-      border-radius: 12px;
+      font-size: 18px;
       flex-shrink: 0;
     }
 
-    .card-body {
-      flex: 1;
-      min-width: 0;
-    }
+    .row-body { flex: 1; min-width: 0; }
 
-    .card-name {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-
-    .card-meta {
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-top: 2px;
+    .row-name {
+      font-size: 16px;
+      color: #000;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .card-meta .since {
-      font-weight: 600;
-      color: var(--green);
+    .row-meta {
+      font-size: 12px;
+      color: #8e8e93;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
+
+    .row-meta .since { color: #007aff; font-weight: 500; }
 
     .log-btn {
-      background: var(--green);
-      color: white;
+      background: #007aff;
+      color: #fff;
       border: none;
-      border-radius: 10px;
-      padding: 9px 16px;
-      font-size: 0.85rem;
-      font-weight: 600;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 14px;
+      font-weight: 500;
       cursor: pointer;
       flex-shrink: 0;
-      transition: background 0.15s, transform 0.1s;
-      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
     }
 
-    .log-btn:hover  { background: var(--green-dark); }
-    .log-btn:active { transform: scale(0.95); }
+    .log-btn:active { opacity: 0.7; transform: scale(0.96); }
 
-    .log-btn.just-logged {
-      background: var(--green-light);
-      color: var(--green);
+    .log-btn.done {
+      background: #e5f0ff;
+      color: #007aff;
     }
 
-    .history-card {
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .history-item {
+    /* History rows */
+    .history-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 11px 16px;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.85rem;
+      padding: 10px 14px;
+      border-bottom: 0.5px solid #c6c6c8;
+      min-height: 44px;
     }
 
-    .history-item:last-child { border-bottom: none; }
+    .history-row:last-child { border-bottom: none; }
 
-    .history-icon { font-size: 1rem; width: 20px; text-align: center; }
-    .history-name { font-weight: 500; flex: 1; }
-    .history-time { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+    .history-name {
+      flex: 1;
+      font-size: 15px;
+      color: #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-time {
+      font-size: 12px;
+      color: #8e8e93;
+      white-space: nowrap;
+    }
 
     .history-delete {
       background: none;
       border: none;
-      color: #d1d5db;
+      color: #c7c7cc;
+      font-size: 16px;
       cursor: pointer;
-      font-size: 0.9rem;
       padding: 4px 6px;
       border-radius: 6px;
       line-height: 1;
-      margin-left: 4px;
+      flex-shrink: 0;
     }
-    .history-delete:hover { color: #ef4444; background: #fef2f2; }
 
-    .empty-history {
-      padding: 28px;
+    .history-delete:active { color: #ff3b30; }
+
+    .empty {
+      padding: 20px;
       text-align: center;
-      color: var(--muted);
-      font-size: 0.88rem;
+      font-size: 14px;
+      color: #8e8e93;
     }
 
-    .footer-row {
+    /* Footer clear button */
+    .footer {
       display: flex;
       justify-content: flex-end;
-      margin-top: 10px;
+      padding: 8px 20px 0;
     }
 
     .clear-btn {
       background: none;
       border: none;
-      color: var(--muted);
+      color: #8e8e93;
+      font-size: 13px;
       cursor: pointer;
-      font-size: 0.78rem;
       padding: 4px 0;
     }
-    .clear-btn:hover { color: #ef4444; }
+
+    .clear-btn:active { color: #ff3b30; }
+
+    /* Icon background colors */
+    .ic-green  { background: #e8f7ee; }
+    .ic-orange { background: #fff3e0; }
+    .ic-blue   { background: #e5f0ff; }
+    .ic-pink   { background: #ffeef4; }
+    .ic-purple { background: #f2eeff; }
+    .ic-yellow { background: #fffbe0; }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>📋 Tracker</h1>
-  <p>Druk op een knop om het tijdstip te registreren</p>
+  <h1>Tracker</h1>
 </header>
 
-<main>
-  <p class="section-label">Events</p>
-  <div class="event-list" id="event-grid"></div>
+<p class="section-label">Events</p>
+<div class="grouped-list" id="event-list"></div>
 
-  <p class="section-label">Geschiedenis</p>
-  <div class="history-card" id="history-list"></div>
-  <div class="footer-row">
-    <button class="clear-btn" onclick="clearHistory()">Geschiedenis wissen</button>
-  </div>
-</main>
+<p class="section-label">Geschiedenis</p>
+<div class="grouped-list" id="history-list"></div>
+<div class="footer">
+  <button class="clear-btn" onclick="clearHistory()">Geschiedenis wissen</button>
+</div>
 
 <script>
-  // ─── CONFIGURATIE ─────────────────────────────────────────────────────────
+  // ─── CONFIGURATIE ──────────────────────────────────────────────────────────
   // Voeg hier je events toe of pas ze aan.
-  // Elk event heeft een id (uniek, geen spaties), naam en emoji.
+  // iconColor: ic-green, ic-orange, ic-blue, ic-pink, ic-purple, ic-yellow
   const EVENTS = [
-    { id: "kattenbak",  name: "Kattenbak kuisen",  icon: "🐱" },
-    // Voeg hier extra events toe:
-    // { id: "mijn-event", name: "Naam van event", icon: "✨" },
+    { id: "kattenbak", name: "Kattenbak kuisen", icon: "🐱", iconColor: "ic-green"  },
+    // { id: "kat-eten",  name: "Kat gevoed",       icon: "🍽️", iconColor: "ic-orange" },
+    // { id: "mijn-event", name: "Naam van event",  icon: "✨",  iconColor: "ic-purple" },
   ];
-  // ─────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────
 
-  const STORAGE_KEY = "tracker_log";
-
-  function loadLog() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    catch { return []; }
-  }
-
-  function saveLog(log) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(log));
-  }
+  const KEY = "tracker_log";
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+  const save = l => localStorage.setItem(KEY, JSON.stringify(l));
 
   function logEvent(id) {
-    const log = loadLog();
+    const log = load();
     log.unshift({ id, ts: Date.now() });
-    saveLog(log);
+    save(log);
     render();
 
     const btn = document.querySelector(`[data-id="${id}"] .log-btn`);
     if (btn) {
-      btn.textContent = "✓ Geregistreerd!";
-      btn.classList.add("just-logged");
-      setTimeout(() => {
-        btn.textContent = "Registreer";
-        btn.classList.remove("just-logged");
-      }, 2000);
+      btn.textContent = "✓ Gelogt";
+      btn.classList.add("done");
+      setTimeout(() => { btn.textContent = "Log"; btn.classList.remove("done"); }, 2000);
     }
   }
 
-  function deleteEntry(index) {
-    const log = loadLog();
-    log.splice(index, 1);
-    saveLog(log);
-    render();
+  function deleteEntry(i) {
+    const log = load(); log.splice(i, 1); save(log); render();
   }
 
   function clearHistory() {
-    if (confirm("Weet je zeker dat je de volledige geschiedenis wilt wissen?")) {
-      saveLog([]);
-      render();
-    }
+    if (confirm("Volledige geschiedenis wissen?")) { save([]); render(); }
   }
 
   function timeSince(ts) {
-    const diff = Math.floor((Date.now() - ts) / 1000);
-    if (diff < 60)    return `${diff} seconden geleden`;
-    if (diff < 3600)  return `${Math.floor(diff / 60)} minuten geleden`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} uur geleden`;
-    const days = Math.floor(diff / 86400);
-    return days === 1 ? "gisteren" : `${days} dagen geleden`;
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60)    return `${s}s geleden`;
+    if (s < 3600)  return `${Math.floor(s / 60)} min geleden`;
+    if (s < 86400) return `${Math.floor(s / 3600)} uur geleden`;
+    const d = Math.floor(s / 86400);
+    return d === 1 ? "gisteren" : `${d} dagen geleden`;
   }
 
-  function formatDatetime(ts) {
+  function fmt(ts) {
     return new Date(ts).toLocaleString("nl-BE", {
       day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit"
@@ -290,48 +259,45 @@
   }
 
   function render() {
-    const log = loadLog();
-    const grid = document.getElementById("event-grid");
-    const historyEl = document.getElementById("history-list");
+    const log = load();
+    const evEl = document.getElementById("event-list");
+    const histEl = document.getElementById("history-list");
 
-    grid.innerHTML = EVENTS.map(ev => {
+    evEl.innerHTML = EVENTS.map(ev => {
       const last = log.find(e => e.id === ev.id);
       const meta = last
-        ? `<span class="since">${timeSince(last.ts)}</span> &middot; ${formatDatetime(last.ts)}`
+        ? `<span class="since">${timeSince(last.ts)}</span> · ${fmt(last.ts)}`
         : "Nog niet geregistreerd";
       return `
-        <div class="card" data-id="${ev.id}">
-          <div class="card-icon">${ev.icon}</div>
-          <div class="card-body">
-            <div class="card-name">${ev.name}</div>
-            <div class="card-meta">${meta}</div>
+        <div class="list-row" data-id="${ev.id}">
+          <div class="row-icon ${ev.iconColor}">${ev.icon}</div>
+          <div class="row-body">
+            <div class="row-name">${ev.name}</div>
+            <div class="row-meta">${meta}</div>
           </div>
-          <button class="log-btn" onclick="logEvent('${ev.id}')">Registreer</button>
+          <button class="log-btn" onclick="logEvent('${ev.id}')">Log</button>
         </div>`;
     }).join("");
 
     if (log.length === 0) {
-      historyEl.innerHTML = `<p class="empty-history">Nog geen registraties</p>`;
+      histEl.innerHTML = `<p class="empty">Nog geen registraties</p>`;
       return;
     }
 
-    historyEl.innerHTML = log.slice(0, 50).map((entry, i) => {
-      const ev = EVENTS.find(e => e.id === entry.id);
-      const icon = ev ? ev.icon : "❓";
-      const name = ev ? ev.name : entry.id;
+    histEl.innerHTML = log.slice(0, 50).map((e, i) => {
+      const ev = EVENTS.find(x => x.id === e.id);
       return `
-        <div class="history-item">
-          <span class="history-icon">${icon}</span>
-          <span class="history-name">${name}</span>
-          <span class="history-time">${formatDatetime(entry.ts)}</span>
-          <button class="history-delete" onclick="deleteEntry(${i})" title="Verwijder">✕</button>
+        <div class="history-row">
+          <div class="row-icon ${ev ? ev.iconColor : ""}">${ev ? ev.icon : "❓"}</div>
+          <span class="history-name">${ev ? ev.name : e.id}</span>
+          <span class="history-time">${fmt(e.ts)}</span>
+          <button class="history-delete" onclick="deleteEntry(${i})">✕</button>
         </div>`;
     }).join("");
   }
 
   render();
-  setInterval(render, 60000);
+  setInterval(render, 30000);
 </script>
-
 </body>
 </html>
