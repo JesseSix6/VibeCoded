@@ -215,9 +215,9 @@
 <script>
   // ─── CONFIGURATIE ──────────────────────────────────────────────────────────
   const CONFIG = {
-    GITHUB_TOKEN: "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",   // PAT met alleen 'gist' scope
-    GIST_ID:      "c27d272c30ccf4f72ccec681fc858bc7",        // Zie setup-instructies
-    GIST_FILE:    "tracker_log.json",
+    WORKER_URL: "JOUW_CLOUDFLARE_WORKER_URL",  // bv. https://tracker.jouwnaam.workers.dev
+    GIST_ID:    "c27d272c30ccf4f72ccec681fc858bc7",
+    GIST_FILE:  "tracker_log.json",
   };
 
   const EVENTS = [
@@ -235,24 +235,16 @@
     document.getElementById("sync-label").textContent = text;
   }
 
-  // ── Gist API helpers ──
+  // ── Gist API helpers (via Cloudflare Worker) ──
   async function fetchLog() {
     setSyncStatus("busy", "Laden…");
     try {
-      const res = await fetch(`https://api.github.com/gists/${CONFIG.GIST_ID}`, {
-        headers: {
-          "Authorization": `Bearer ${CONFIG.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-        }
-      });
+      const res = await fetch(`${CONFIG.WORKER_URL}/read?gist_id=${CONFIG.GIST_ID}&file=${CONFIG.GIST_FILE}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const gist = await res.json();
-      const content = gist.files[CONFIG.GIST_FILE]?.content || "[]";
-      log = JSON.parse(content);
+      log = await res.json();
       setSyncStatus("ok", "Gesynchroniseerd");
     } catch (e) {
-      setSyncStatus("error", "Laden mislukt — check je token/gist-ID");
+      setSyncStatus("error", "Laden mislukt");
       console.error(e);
     }
     render();
@@ -263,17 +255,10 @@
     saving = true;
     setSyncStatus("busy", "Opslaan…");
     try {
-      const res = await fetch(`https://api.github.com/gists/${CONFIG.GIST_ID}`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${CONFIG.GITHUB_TOKEN}`,
-          "Accept": "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          files: { [CONFIG.GIST_FILE]: { content: JSON.stringify(log) } }
-        })
+      const res = await fetch(`${CONFIG.WORKER_URL}/write`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gist_id: CONFIG.GIST_ID, file: CONFIG.GIST_FILE, data: log })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setSyncStatus("ok", "Opgeslagen");
