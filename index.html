@@ -19,7 +19,6 @@
       padding-bottom: env(safe-area-inset-bottom, 16px);
     }
 
-    /* Large title header */
     header {
       padding: 16px 16px 0;
       padding-top: max(16px, env(safe-area-inset-top, 16px));
@@ -34,7 +33,6 @@
       padding: 8px 4px 4px;
     }
 
-    /* Section label */
     .section-label {
       font-size: 13px;
       font-weight: 400;
@@ -44,7 +42,6 @@
       padding: 18px 20px 6px;
     }
 
-    /* Grouped list */
     .grouped-list {
       background: #fff;
       border-radius: 12px;
@@ -109,13 +106,9 @@
     }
 
     .log-btn:active { opacity: 0.7; transform: scale(0.96); }
+    .log-btn.done { background: #e5f0ff; color: #007aff; }
+    .log-btn:disabled { opacity: 0.4; cursor: default; }
 
-    .log-btn.done {
-      background: #e5f0ff;
-      color: #007aff;
-    }
-
-    /* History rows */
     .history-row {
       display: flex;
       align-items: center;
@@ -136,11 +129,7 @@
       text-overflow: ellipsis;
     }
 
-    .history-time {
-      font-size: 12px;
-      color: #8e8e93;
-      white-space: nowrap;
-    }
+    .history-time { font-size: 12px; color: #8e8e93; white-space: nowrap; }
 
     .history-delete {
       background: none;
@@ -156,19 +145,9 @@
 
     .history-delete:active { color: #ff3b30; }
 
-    .empty {
-      padding: 20px;
-      text-align: center;
-      font-size: 14px;
-      color: #8e8e93;
-    }
+    .empty { padding: 20px; text-align: center; font-size: 14px; color: #8e8e93; }
 
-    /* Footer clear button */
-    .footer {
-      display: flex;
-      justify-content: flex-end;
-      padding: 8px 20px 0;
-    }
+    .footer { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
 
     .clear-btn {
       background: none;
@@ -181,7 +160,31 @@
 
     .clear-btn:active { color: #ff3b30; }
 
-    /* Icon background colors */
+    /* Sync status banner */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 20px;
+      font-size: 12px;
+      color: #8e8e93;
+      min-height: 28px;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #8e8e93;
+      flex-shrink: 0;
+    }
+
+    .sync-dot.ok     { background: #34c759; }
+    .sync-dot.busy   { background: #ff9500; animation: pulse .8s infinite alternate; }
+    .sync-dot.error  { background: #ff3b30; }
+
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
+
     .ic-green  { background: #e8f7ee; }
     .ic-orange { background: #fff3e0; }
     .ic-blue   { background: #e5f0ff; }
@@ -195,6 +198,10 @@
 <header>
   <h1>Tracker</h1>
 </header>
+<div class="sync-bar">
+  <div class="sync-dot busy" id="sync-dot"></div>
+  <span id="sync-label">Laden…</span>
+</div>
 
 <p class="section-label">Events</p>
 <div class="grouped-list" id="event-list"></div>
@@ -207,41 +214,106 @@
 
 <script>
   // ─── CONFIGURATIE ──────────────────────────────────────────────────────────
-  // Voeg hier je events toe of pas ze aan.
-  // iconColor: ic-green, ic-orange, ic-blue, ic-pink, ic-purple, ic-yellow
+  const CONFIG = {
+    GITHUB_TOKEN: "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",   // PAT met alleen 'gist' scope
+    GIST_ID:      "c27d272c30ccf4f72ccec681fc858bc7",        // Zie setup-instructies
+    GIST_FILE:    "tracker_log.json",
+  };
+
   const EVENTS = [
     { id: "kattenbak", name: "Kattenbak kuisen", icon: "🐱", iconColor: "ic-green"  },
     // { id: "kat-eten",  name: "Kat gevoed",       icon: "🍽️", iconColor: "ic-orange" },
-    // { id: "mijn-event", name: "Naam van event",  icon: "✨",  iconColor: "ic-purple" },
+    // { id: "mijn-event", name: "Naam",            icon: "✨",  iconColor: "ic-purple" },
   ];
   // ──────────────────────────────────────────────────────────────────────────
 
-  const KEY = "tracker_log";
-  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
-  const save = l => localStorage.setItem(KEY, JSON.stringify(l));
+  let log = [];
+  let saving = false;
 
-  function logEvent(id) {
-    const log = load();
+  function setSyncStatus(state, text) {
+    document.getElementById("sync-dot").className = "sync-dot " + state;
+    document.getElementById("sync-label").textContent = text;
+  }
+
+  // ── Gist API helpers ──
+  async function fetchLog() {
+    setSyncStatus("busy", "Laden…");
+    try {
+      const res = await fetch(`https://api.github.com/gists/${CONFIG.GIST_ID}`, {
+        headers: {
+          "Authorization": `Bearer ${CONFIG.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const gist = await res.json();
+      const content = gist.files[CONFIG.GIST_FILE]?.content || "[]";
+      log = JSON.parse(content);
+      setSyncStatus("ok", "Gesynchroniseerd");
+    } catch (e) {
+      setSyncStatus("error", "Laden mislukt — check je token/gist-ID");
+      console.error(e);
+    }
+    render();
+  }
+
+  async function saveLog() {
+    if (saving) return;
+    saving = true;
+    setSyncStatus("busy", "Opslaan…");
+    try {
+      const res = await fetch(`https://api.github.com/gists/${CONFIG.GIST_ID}`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${CONFIG.GITHUB_TOKEN}`,
+          "Accept": "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          files: { [CONFIG.GIST_FILE]: { content: JSON.stringify(log) } }
+        })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setSyncStatus("ok", "Opgeslagen");
+    } catch (e) {
+      setSyncStatus("error", "Opslaan mislukt");
+      console.error(e);
+    }
+    saving = false;
+  }
+
+  // ── Acties ──
+  async function logEvent(id) {
     log.unshift({ id, ts: Date.now() });
-    save(log);
     render();
 
     const btn = document.querySelector(`[data-id="${id}"] .log-btn`);
     if (btn) {
       btn.textContent = "✓ Gelogt";
       btn.classList.add("done");
-      setTimeout(() => { btn.textContent = "Log"; btn.classList.remove("done"); }, 2000);
+      btn.disabled = true;
+      setTimeout(() => { btn.textContent = "Log"; btn.classList.remove("done"); btn.disabled = false; }, 2000);
     }
+
+    await saveLog();
   }
 
-  function deleteEntry(i) {
-    const log = load(); log.splice(i, 1); save(log); render();
+  async function deleteEntry(i) {
+    log.splice(i, 1);
+    render();
+    await saveLog();
   }
 
-  function clearHistory() {
-    if (confirm("Volledige geschiedenis wissen?")) { save([]); render(); }
+  async function clearHistory() {
+    if (!confirm("Volledige geschiedenis wissen?")) return;
+    log = [];
+    render();
+    await saveLog();
   }
 
+  // ── Hulpfuncties ──
   function timeSince(ts) {
     const s = Math.floor((Date.now() - ts) / 1000);
     if (s < 60)    return `${s}s geleden`;
@@ -258,9 +330,9 @@
     });
   }
 
+  // ── Render ──
   function render() {
-    const log = load();
-    const evEl = document.getElementById("event-list");
+    const evEl   = document.getElementById("event-list");
     const histEl = document.getElementById("history-list");
 
     evEl.innerHTML = EVENTS.map(ev => {
@@ -296,8 +368,8 @@
     }).join("");
   }
 
-  render();
-  setInterval(render, 30000);
+  fetchLog();
+  setInterval(fetchLog, 5 * 60 * 1000); // elke 5 min verversen
 </script>
 </body>
 </html>
