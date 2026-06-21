@@ -23,8 +23,8 @@ jobs:
           GIST_TOKEN     = os.environ["GIST_TOKEN"]
           GIST_ID        = os.environ["GIST_ID"]
           TO_EMAIL       = "sixjesse@gmail.com"
-          FROM_EMAIL     = "tracker@resend.dev"
-          ALERT_HOURS    = 96
+          FROM_EMAIL     = "onboarding@resend.dev"
+          ALERT_HOURS    = 0
 
           EVENTS = [
             { "id": "kattenbak", "name": "Kattenbak kuisen", "icon": "🐱" },
