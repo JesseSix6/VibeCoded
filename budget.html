@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maandbudget</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f0f2f5;
+    color: #1c1e21;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  .container { max-width: 560px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 16px; text-align: center; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  }
+  label { font-size: .85rem; font-weight: 600; display: block; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccd0d5;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  input:focus { outline: 2px solid #1877f2; border-color: transparent; }
+  .row { display: flex; gap: 10px; }
+  .row > div:first-child { flex: 2; }
+  .row > div:nth-child(2) { flex: 1; }
+  button {
+    background: #1877f2;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    width: 100%;
+  }
+  button:hover { background: #166fe5; }
+  .stats { display: flex; gap: 12px; text-align: center; }
+  .stat { flex: 1; }
+  .stat .value { font-size: 1.3rem; font-weight: 700; }
+  .stat .label { font-size: .75rem; color: #65676b; }
+  .bar {
+    height: 10px;
+    background: #e4e6eb;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 14px;
+  }
+  .bar-fill {
+    height: 100%;
+    background: #42b72a;
+    width: 0%;
+    transition: width .3s, background .3s;
+  }
+  .warning { color: #e41e3f; font-weight: 600; text-align: center; margin-top: 10px; font-size: .9rem; display: none; }
+  ul { list-style: none; }
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #e4e6eb;
+  }
+  li:last-child { border-bottom: none; }
+  li .desc { flex: 1; }
+  li .amount { font-weight: 600; margin-right: 12px; }
+  li .delete {
+    background: none;
+    border: none;
+    color: #e41e3f;
+    cursor: pointer;
+    font-size: 1.1rem;
+    width: auto;
+    margin: 0;
+    padding: 4px 8px;
+  }
+  .empty { color: #65676b; text-align: center; padding: 10px 0; }
+  .info { font-size: .8rem; color: #65676b; margin-top: 8px; }
+  .reset-btn { background: #e4e6eb; color: #1c1e21; }
+  .reset-btn:hover { background: #d8dade; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>💶 Maandbudget</h1>
+
+  <div class="card">
+    <label for="budget">Maximum per maand (€)</label>
+    <input type="number" id="budget" step="0.01" placeholder="bv. 250">
+    <div class="info" id="carryInfo"></div>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><div class="value" id="totalSpent">€ 0,00</div><div class="label">Uitgegeven</div></div>
+      <div class="stat"><div class="value" id="remaining">€ 0,00</div><div class="label">Resterend</div></div>
+      <div class="stat"><div class="value" id="percent">0%</div><div class="label">Van budget</div></div>
+    </div>
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    <div class="warning" id="warning">⚠️ Je hebt je maandbudget overschreden!</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="desc">Omschrijving</label>
+        <input type="text" id="desc" placeholder="bv. Boodschappen">
+      </div>
+      <div>
+        <label for="amount">Bedrag (€)</label>
+        <input type="number" id="amount" min="0" step="0.01" placeholder="0,00">
+      </div>
+    </div>
+    <button id="addBtn">Uitgave toevoegen</button>
+  </div>
+
+  <div class="card">
+    <label>Uitgaven</label>
+    <ul id="list"></ul>
+    <div class="empty" id="empty">Nog geen uitgaven.</div>
+  </div>
+
+  <button class="reset-btn" id="resetBtn">Alles resetten (nieuw budget: € 250)</button>
+</div>
+
+<script>
+  const budgetInput = document.getElementById('budget');
+  const descInput = document.getElementById('desc');
+  const amountInput = document.getElementById('amount');
+  const addBtn = document.getElementById('addBtn');
+  const list = document.getElementById('list');
+
+  const DEFAULT_BUDGET = 250;
+  const currentMonth = new Date().toISOString().slice(0, 7); // bv. "2026-07"
+
+  let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+  budgetInput.value = localStorage.getItem('budget') || DEFAULT_BUDGET;
+
+  const fmt = n => '€ ' + n.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function save() {
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    localStorage.setItem('budget', budgetInput.value);
+    localStorage.setItem('month', currentMonth);
+  }
+
+  // Automatische maandelijkse reset
+  const savedMonth = localStorage.getItem('month');
+  if (savedMonth && savedMonth !== currentMonth) {
+    const oldBudget = parseFloat(localStorage.getItem('budget')) || DEFAULT_BUDGET;
+    const oldTotal = expenses.reduce((s, e) => s + e.amount, 0);
+    const remaining = oldBudget - oldTotal;
+    const newBudget = remaining < 0 ? DEFAULT_BUDGET + remaining : DEFAULT_BUDGET;
+    expenses = [];
+    budgetInput.value = newBudget.toFixed(2);
+    if (remaining < 0) {
+      document.getElementById('carryInfo').textContent =
+        'Nieuwe maand: vorige maand ' + fmt(remaining) + ' in de min, dus budget is ' + fmt(newBudget) + ' i.p.v. ' + fmt(DEFAULT_BUDGET) + '.';
+    }
+    save();
+  }
+
+  function resetAll() {
+    if (!confirm('Alles resetten? Uitgaven worden gewist en het budget wordt € 250.')) return;
+    expenses = [];
+    budgetInput.value = DEFAULT_BUDGET;
+    document.getElementById('carryInfo').textContent = '';
+    save();
+    render();
+  }
+
+  function render() {
+    const budget = parseFloat(budgetInput.value) || 0;
+    const total = expenses.reduce((s, e) => s + e.amount, 0);
+    const pct = budget > 0 ? (total / budget) * 100 : 0;
+
+    document.getElementById('totalSpent').textContent = fmt(total);
+    document.getElementById('remaining').textContent = fmt(budget - total);
+    document.getElementById('percent').textContent = Math.round(pct) + '%';
+
+    const fill = document.getElementById('barFill');
+    fill.style.width = Math.min(pct, 100) + '%';
+    fill.style.background = pct >= 100 ? '#e41e3f' : pct >= 80 ? '#f7b928' : '#42b72a';
+    document.getElementById('warning').style.display = (budget > 0 && total > budget) ? 'block' : 'none';
+
+    list.innerHTML = '';
+    document.getElementById('empty').style.display = expenses.length ? 'none' : 'block';
+    expenses.forEach((e, i) => {
+      const li = document.createElement('li');
+      const desc = document.createElement('span');
+      desc.className = 'desc';
+      desc.textContent = e.desc;
+      const amt = document.createElement('span');
+      amt.className = 'amount';
+      amt.textContent = fmt(e.amount);
+      const del = document.createElement('button');
+      del.className = 'delete';
+      del.textContent = '✕';
+      del.title = 'Verwijderen';
+      del.onclick = () => { expenses.splice(i, 1); save(); render(); };
+      li.append(desc, amt, del);
+      list.appendChild(li);
+    });
+  }
+
+  function addExpense() {
+    const desc = descInput.value.trim();
+    const amount = parseFloat(amountInput.value);
+    if (!desc || !amount || amount <= 0) return;
+    expenses.push({ desc, amount });
+    descInput.value = '';
+    amountInput.value = '';
+    descInput.focus();
+    save();
+    render();
+  }
+
+  addBtn.onclick = addExpense;
+  document.getElementById('resetBtn').onclick = resetAll;
+  amountInput.addEventListener('keydown', e => { if (e.key === 'Enter') addExpense(); });
+  descInput.addEventListener('keydown', e => { if (e.key === 'Enter') amountInput.focus(); });
+  budgetInput.addEventListener('input', () => { save(); render(); });
+
+  save();
+  render();
+</script>
+</body>
+</html>
